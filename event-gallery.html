@@ -2,11 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Event Gallery</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,600;1,9..144,500&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
   :root{
     --ink:#100c10; --surface:#1b1620; --surface-2:#241d29;
@@ -18,13 +19,45 @@
   body{ margin:0; background:var(--ink); color:var(--cream); font-family:'Manrope', sans-serif; -webkit-font-smoothing:antialiased; overflow-x:hidden; }
   ::selection{ background:var(--gold); color:var(--ink); }
 
+  /* subtle film-grain texture over the whole page, like exposed photo paper */
+  body::before{
+    content:""; position:fixed; inset:0; z-index:1; pointer-events:none; opacity:.035; mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  }
+
+  /* drifting bokeh circles — the soft out-of-focus lights every photographer knows */
+  .bokeh{ position:absolute; inset:0; overflow:hidden; pointer-events:none; z-index:0; }
+  .bokeh span{ position:absolute; border-radius:50%;
+    background:radial-gradient(circle at 35% 35%, rgba(228,201,140,.5), rgba(201,162,91,.08) 60%, transparent 72%);
+    animation:drift ease-in-out infinite; }
+  .bokeh span:nth-child(1){ width:130px; height:130px; left:6%; top:18%; animation-duration:17s; }
+  .bokeh span:nth-child(2){ width:56px; height:56px; left:82%; top:14%; animation-duration:12s; animation-delay:-3s; }
+  .bokeh span:nth-child(3){ width:96px; height:96px; left:72%; top:66%; animation-duration:19s; animation-delay:-6s; }
+  .bokeh span:nth-child(4){ width:42px; height:42px; left:14%; top:72%; animation-duration:11s; animation-delay:-2s; }
+  .bokeh span:nth-child(5){ width:68px; height:68px; left:46%; top:6%; animation-duration:15s; animation-delay:-8s; }
+  .bokeh span:nth-child(6){ width:34px; height:34px; left:90%; top:48%; animation-duration:13s; animation-delay:-5s; }
+  @keyframes drift{ 0%,100%{ transform:translate(0,0) scale(1); opacity:.5; } 50%{ transform:translate(-16px,-24px) scale(1.15); opacity:.85; } }
+  @media (prefers-reduced-motion: reduce){ .bokeh span{ animation:none; } }
+
+  /* film-sprocket divider between hero and toolbar */
+  .film-divider{ height:14px; background-color:var(--gold);
+    background-image:radial-gradient(circle, var(--ink) 2.6px, transparent 3px);
+    background-size:22px 14px; background-position:11px center; position:relative; z-index:5; }
+
   #shutter{ position:fixed; inset:0; z-index:9999; background:var(--ink); clip-path:circle(85% at 50% 50%); animation:shutterClose 1.15s cubic-bezier(.7,0,.3,1) forwards; pointer-events:none; }
   @keyframes shutterClose{ 0%{clip-path:circle(120% at 50% 50%);} 60%{clip-path:circle(18% at 50% 50%);} 100%{clip-path:circle(0% at 50% 50%);} }
   @media (prefers-reduced-motion: reduce){ #shutter{ display:none; } }
 
   .hero{ position:relative; min-height:88vh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:40px 24px;
     background: radial-gradient(ellipse 60% 50% at 50% 20%, rgba(201,162,91,0.14), transparent 60%), var(--ink);
-    border-bottom:1px solid var(--line); }
+    border-bottom:1px solid var(--line); overflow:hidden; }
+  .hero > *{ position:relative; z-index:1; }
+  .hero .bokeh{ z-index:0; }
+  @media (max-width:420px){
+    .hero{ padding:64px 18px 40px; min-height:auto; }
+    .stat-row{ gap:16px; }
+    .hero .note{ font-size:14px; }
+  }
   .aperture{ width:64px; height:64px; border-radius:50%; border:1.5px solid var(--gold); position:relative; margin-bottom:28px; animation:irisIn 1.4s ease .3s both; }
   .aperture::before{ content:""; position:absolute; inset:14px; border-radius:50%; border:1px solid var(--gold-soft); opacity:.7; }
   @keyframes irisIn{ from{ transform:scale(.3) rotate(-40deg); opacity:0; } to{ transform:scale(1) rotate(0); opacity:1; } }
@@ -48,7 +81,11 @@
   .chip:hover{ border-color:var(--gold); color:var(--cream); }
   .chip.active{ background:var(--gold); border-color:var(--gold); color:var(--ink); }
   .toolbar .count{ margin-left:auto; font-size:12px; color:var(--dust); padding-left:14px; }
-  @media (max-width:640px){ .toolbar{ justify-content:flex-start; overflow-x:auto; } .toolbar .count{ display:none; } }
+  @media (max-width:640px){
+    .toolbar{ justify-content:flex-start; overflow-x:auto; scroll-snap-type:x proximity; -webkit-overflow-scrolling:touch; }
+    .toolbar .count{ display:none; }
+    .chip{ scroll-snap-align:start; flex-shrink:0; }
+  }
 
   .gallery-wrap{ padding:44px 20px 90px; max-width:1280px; margin:0 auto; }
   .gallery{ column-count:4; column-gap:14px; }
@@ -67,6 +104,11 @@
   .card:hover .tag{ opacity:1; transform:translateY(0); }
   @keyframes cardIn{ from{opacity:0; transform:translateY(14px);} to{opacity:1; transform:translateY(0);} }
 
+  @media (hover:none){
+    .card .tag{ opacity:1; transform:translateY(0); }
+    .card::after{ opacity:.85; }
+  }
+
   .state-panel{ text-align:center; padding:80px 20px; color:var(--dust); }
   .state-panel .aperture{ margin:0 auto 20px; animation:none; }
 
@@ -81,16 +123,28 @@
     cursor:pointer; display:inline-flex; align-items:center; gap:8px; transition:all .25s ease; text-decoration:none; }
   .lb-btn:hover{ border-color:var(--gold); color:var(--gold-soft); }
   .lb-close, .lb-nav{ position:fixed; top:0; background:transparent; border:none; color:var(--cream); cursor:pointer; }
-  .lb-close{ top:22px; right:26px; font-size:26px; }
+  .lb-close{ top:calc(22px + env(safe-area-inset-top)); right:calc(26px + env(safe-area-inset-right)); font-size:26px; }
   .lb-nav{ top:50%; transform:translateY(-50%); font-size:34px; padding:14px; opacity:.7; }
   .lb-nav:hover{ opacity:1; color:var(--gold); }
   .lb-prev{ left:14px; } .lb-next{ right:14px; }
-  @media (max-width:640px){ .lb-nav{ font-size:26px; } }
+  @media (max-width:640px){
+    .lb-nav{ font-size:24px; width:46px; height:46px; padding:0; opacity:1; background:rgba(27,22,32,.7); border-radius:50%;
+      display:flex; align-items:center; justify-content:center; border:1px solid var(--line); }
+    .lb-prev{ left:calc(8px + env(safe-area-inset-left)); } .lb-next{ right:calc(8px + env(safe-area-inset-right)); }
+    .lb-actions{ flex-wrap:wrap; justify-content:center; }
+  }
 
   footer{ text-align:center; padding:36px 20px 50px; color:var(--dust); font-size:12.5px; border-top:1px solid var(--line); }
   footer .studio{ color:var(--gold-soft); font-weight:600; }
   footer a{ color:var(--dust); }
   :focus-visible{ outline:2px solid var(--gold); outline-offset:2px; }
+
+  .zip-btn{ border-color:var(--gold); color:var(--gold-soft); font-weight:700; }
+  .zip-btn:hover{ background:var(--gold); color:var(--ink); }
+  .zip-btn:disabled{ opacity:.6; cursor:not-allowed; }
+  .spinner{ display:inline-block; width:12px; height:12px; border:2px solid rgba(228,201,140,.35); border-top-color:var(--gold-soft); border-radius:50%; animation:spin .7s linear infinite; vertical-align:-1px; margin-right:6px; }
+  .zip-btn:hover .spinner{ border-color:rgba(16,12,16,.35); border-top-color:var(--ink); }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
 </style>
 </head>
 <body>
@@ -98,6 +152,7 @@
 <div id="shutter" aria-hidden="true"></div>
 
 <header class="hero">
+  <div class="bokeh" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></div>
   <div class="aperture" aria-hidden="true"></div>
   <p class="eyebrow">Almighty Studio Gallery</p>
   <h1 id="event-title">Loading&hellip;</h1>
@@ -111,8 +166,10 @@
     <div class="stat"><b>Live</b><span>Updated today</span></div>
   </div>
 </header>
+<div class="film-divider" aria-hidden="true"></div>
 
 <nav class="toolbar" id="toolbar" aria-label="Filter photos by moment" style="display:none;">
+  <button class="chip zip-btn" id="download-zip-btn">Download all as ZIP</button>
   <span class="count" id="visible-count"></span>
 </nav>
 
@@ -130,7 +187,7 @@
     <figcaption id="lb-caption"></figcaption>
   </figure>
   <div class="lb-actions">
-    <a class="lb-btn" id="lb-download" download><span>&#8595;</span> Download</a>
+    <button class="lb-btn" id="lb-download"><span>&#8595;</span> Download</button>
     <a class="lb-btn" id="lb-whatsapp" target="_blank" rel="noopener"><span>&#9993;</span> Share</a>
   </div>
 </div>
@@ -199,6 +256,7 @@ async function loadGallery(){
 
     toolbarEl.style.display = "flex";
     buildChips();
+    toolbarEl.insertBefore(document.getElementById("download-zip-btn"), visibleCountEl);
     renderGallery();
   }catch(err){
     document.getElementById("event-title").textContent = "Gallery not found";
@@ -253,8 +311,6 @@ function paintLightbox(){
   const photo = filtered[lbIndex];
   lbImg.src = photo.url; lbImg.alt = photo.category;
   lbCaption.textContent = photo.category;
-  lbDownload.href = photo.url;
-  lbDownload.download = `${photo.category.replace(/\s+/g,"_")}_${lbIndex + 1}.jpg`;
   lbWhatsapp.href = `https://wa.me/?text=${encodeURIComponent("Check out this photo: " + photo.url)}`;
 }
 function closeLightbox(){ lb.classList.remove("open"); }
@@ -270,6 +326,94 @@ document.addEventListener("keydown", (e) => {
   if(e.key === "Escape") closeLightbox();
   if(e.key === "ArrowRight") nextPhoto();
   if(e.key === "ArrowLeft") prevPhoto();
+});
+
+/* swipe left/right to move between photos on touch devices */
+let touchStartX = null;
+lb.addEventListener("touchstart", (e) => { touchStartX = e.changedTouches[0].clientX; }, { passive:true });
+lb.addEventListener("touchend", (e) => {
+  if(touchStartX === null) return;
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  if(Math.abs(dx) > 40){ dx < 0 ? nextPhoto() : prevPhoto(); }
+  touchStartX = null;
+}, { passive:true });
+
+/* ---------- Downloads ----------
+   Cross-origin images (Supabase storage URLs) are ignored by the
+   HTML `download` attribute — the browser just opens them instead
+   of saving. Fetching the bytes and saving a blob works regardless
+   of origin, as long as the storage bucket allows public reads. */
+function extFromContentType(type){
+  if(!type) return "jpg";
+  const map = { "image/jpeg":"jpg", "image/png":"png", "image/webp":"webp", "image/gif":"gif" };
+  return map[type] || "jpg";
+}
+async function downloadBlob(url, filename){
+  const res = await fetch(url);
+  if(!res.ok) throw new Error("Could not fetch the image");
+  const blob = await res.blob();
+  const blobUrl = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = blobUrl;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(blobUrl);
+}
+
+lbDownload.addEventListener("click", async () => {
+  const photo = filtered[lbIndex];
+  const original = lbDownload.innerHTML;
+  lbDownload.disabled = true;
+  lbDownload.innerHTML = `<span class="spinner"></span> Downloading`;
+  try{
+    const res = await fetch(photo.url);
+    const blob = await res.blob();
+    const filename = `${photo.category.replace(/\s+/g,"_")}_${lbIndex + 1}.${extFromContentType(blob.type)}`;
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = blobUrl; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(blobUrl);
+  }catch(err){
+    window.open(photo.url, "_blank");
+  }finally{
+    lbDownload.disabled = false;
+    lbDownload.innerHTML = original;
+  }
+});
+
+/* ---------- Download all as ZIP ---------- */
+const zipBtn = document.getElementById("download-zip-btn");
+zipBtn.addEventListener("click", async () => {
+  if(!filtered.length) return;
+  const original = zipBtn.textContent;
+  zipBtn.disabled = true;
+  try{
+    const zip = new JSZip();
+    for(let i = 0; i < filtered.length; i++){
+      zipBtn.innerHTML = `<span class="spinner"></span> Adding photo ${i + 1} of ${filtered.length}`;
+      const photo = filtered[i];
+      const res = await fetch(photo.url);
+      const blob = await res.blob();
+      const ext = extFromContentType(blob.type);
+      zip.file(`${photo.category.replace(/\s+/g,"_")}_${i + 1}.${ext}`, blob);
+    }
+    zipBtn.innerHTML = `<span class="spinner"></span> Zipping...`;
+    const content = await zip.generateAsync({ type: "blob" });
+    const zipUrl = URL.createObjectURL(content);
+    const a = document.createElement("a");
+    a.href = zipUrl;
+    a.download = `${(slug || "event")}-photos.zip`;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(zipUrl);
+  }catch(err){
+    alert("Couldn't prepare the ZIP download. Please try again.");
+  }finally{
+    zipBtn.disabled = false;
+    zipBtn.textContent = original;
+  }
 });
 
 const shutter = document.getElementById("shutter");
