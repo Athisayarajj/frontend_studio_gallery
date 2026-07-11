@@ -24,6 +24,10 @@
   input:focus, select:focus, textarea:focus{ outline:2px solid var(--gold); outline-offset:1px; }
   label{ font-size:12px; color:var(--dust); text-transform:uppercase; letter-spacing:.06em; font-weight:600; display:block; margin-bottom:6px; }
   .field{ margin-bottom:16px; }
+  .check-field{ display:flex; align-items:flex-start; gap:10px; margin-bottom:16px; }
+  .check-field input{ width:auto; margin-top:3px; flex-shrink:0; }
+  .check-field .txt{ font-size:13px; color:var(--dust); }
+  .check-field .txt b{ display:block; color:var(--cream); font-weight:600; text-transform:none; letter-spacing:0; font-size:13.5px; margin-bottom:2px; }
 
   body::before{
     content:""; position:fixed; inset:0; z-index:0; pointer-events:none; opacity:.03; mix-blend-mode:overlay;
@@ -99,7 +103,10 @@
   .event-body h3{ font-size:1.15rem; }
   .event-body .meta{ color:var(--dust); font-size:12.5px; }
   .event-body .row{ display:flex; gap:8px; margin-top:auto; }
-  .badge{ align-self:flex-start; font-size:11px; padding:4px 10px; border-radius:999px; border:1px solid var(--line); color:var(--dust); }
+  .badge-row{ display:flex; gap:6px; flex-wrap:wrap; }
+  .badge{ font-size:11px; padding:4px 10px; border-radius:999px; border:1px solid var(--line); color:var(--dust); }
+  .badge.gold{ border-color:var(--gold); color:var(--gold-soft); }
+  .badge.warn{ border-color:var(--danger); color:var(--danger); }
 
   .add-card{ border:1.5px dashed var(--line); border-radius:14px; display:flex; align-items:center; justify-content:center;
     min-height:220px; cursor:pointer; color:var(--dust); flex-direction:column; gap:10px; transition:all .2s ease; }
@@ -108,7 +115,7 @@
 
   .modal-backdrop{ position:fixed; inset:0; background:rgba(8,6,9,0.7); z-index:100; display:none; align-items:center; justify-content:center; padding:20px; }
   .modal-backdrop.open{ display:flex; }
-  .modal{ background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:30px; width:100%; max-width:440px; box-shadow:var(--shadow); max-height:90vh; overflow-y:auto; }
+  .modal{ background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:30px; width:100%; max-width:460px; box-shadow:var(--shadow); max-height:90vh; overflow-y:auto; }
   .modal h3{ font-size:1.3rem; margin-bottom:4px; }
   .modal p.sub{ color:var(--dust); font-size:13px; margin:0 0 22px; }
   .modal-actions{ display:flex; gap:10px; margin-top:6px; }
@@ -128,6 +135,7 @@
   .panel{ background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:24px; }
   .panel + .panel{ margin-top:20px; }
   .panel h4{ font-size:1rem; margin-bottom:14px; letter-spacing:.02em; }
+  .panel h4 small{ display:block; font-size:11.5px; color:var(--dust); text-transform:none; letter-spacing:0; font-weight:500; margin-top:3px; }
 
   .dropzone{ border:1.5px dashed var(--line); border-radius:12px; padding:34px 16px; text-align:center; color:var(--dust);
     cursor:pointer; transition:all .2s ease; font-size:13.5px; }
@@ -143,6 +151,8 @@
   .photo-item .del{ position:absolute; top:5px; right:5px; width:24px; height:24px; border-radius:50%; background:rgba(8,6,9,0.75);
     border:none; color:var(--cream); cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center; }
   .photo-item .del:hover{ background:var(--danger); }
+  .photo-item .face-tag{ position:absolute; top:5px; left:5px; font-size:9.5px; font-weight:700; padding:2px 6px; border-radius:999px;
+    background:rgba(16,12,16,0.85); color:var(--gold-soft); }
 
   #qr-canvas-wrap{ display:flex; justify-content:center; padding:14px; background:#fff; border-radius:10px; margin-bottom:14px; }
   .link-box{ display:flex; gap:8px; align-items:center; background:var(--surface-2); border:1px solid var(--line); border-radius:8px;
@@ -150,13 +160,16 @@
   .link-box span{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; }
   .toast{ position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--gold); color:var(--ink);
     padding:12px 22px; border-radius:999px; font-size:13px; font-weight:700; box-shadow:var(--shadow); opacity:0; pointer-events:none;
-    transition:all .3s ease; z-index:300; }
+    transition:all .3s ease; z-index:300; max-width:90vw; text-align:center; }
   .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
   .toast.error{ background:var(--danger); color:#fff; }
 
   .empty-mini{ text-align:center; color:var(--dust); font-size:13px; padding:20px 0; }
   .spinner{ display:inline-block; width:14px; height:14px; border:2px solid rgba(16,12,16,.3); border-top-color:var(--ink); border-radius:50%; animation:spin .7s linear infinite; }
   @keyframes spin{ to{ transform:rotate(360deg); } }
+
+  .settings-save-row{ display:flex; justify-content:flex-end; margin-top:4px; }
+  .settings-save-row .btn{ width:auto; }
 </style>
 </head>
 <body>
@@ -218,8 +231,8 @@
     <div class="detail-grid">
       <div>
         <div class="panel">
-          <h4>Upload photos</h4>
-          <div class="field" style="display:flex; align-items:center; gap:9px; margin-bottom:14px;">
+          <h4>Upload photos<small>Faces are detected automatically so guests can find themselves later.</small></h4>
+          <div class="field" style="display:flex; align-items:center; gap:9px; margin-bottom:14px; margin-top:14px;">
             <input type="checkbox" id="compress-toggle" checked style="width:auto;">
             <label for="compress-toggle" style="margin:0; text-transform:none; letter-spacing:0; font-weight:500; color:var(--dust); font-size:13px;">
               Compress photos before upload <span style="color:var(--dust);">(recommended — saves storage space)</span>
@@ -232,6 +245,31 @@
           <input type="file" id="file-input" accept="image/*" multiple style="display:none;">
           <div class="photo-grid" id="photo-grid"></div>
           <p class="empty-mini" id="photo-empty" style="display:none;">No photos uploaded yet — this is what guests will see once you add some.</p>
+        </div>
+
+        <div class="panel">
+          <h4>Event settings</h4>
+          <div class="field">
+            <label for="setting-retention">Auto-delete photos</label>
+            <select id="setting-retention">
+              <option value="">Never (keep until I delete the event)</option>
+              <option value="7">7 days after the event date</option>
+              <option value="14">14 days after the event date</option>
+              <option value="30">30 days after the event date</option>
+              <option value="60">60 days after the event date</option>
+              <option value="90">90 days after the event date</option>
+            </select>
+          </div>
+          <div class="check-field">
+            <input type="checkbox" id="setting-face-only">
+            <div class="txt">
+              <b>Guests can only view their own photos</b>
+              Guests must take a selfie to see anything — they can't browse the full gallery, only the photos they're matched in.
+            </div>
+          </div>
+          <div class="settings-save-row">
+            <button class="btn small" id="save-settings-btn">Save settings</button>
+          </div>
         </div>
       </div>
 
@@ -265,6 +303,21 @@
       <label for="ne-venue">Venue</label>
       <input id="ne-venue" placeholder="e.g. Rani Mahal, Thoothukudi">
     </div>
+    <div class="field">
+      <label for="ne-retention">Auto-delete photos</label>
+      <select id="ne-retention">
+        <option value="">Never</option>
+        <option value="7">7 days after the event</option>
+        <option value="14">14 days after the event</option>
+        <option value="30">30 days after the event</option>
+        <option value="60">60 days after the event</option>
+        <option value="90">90 days after the event</option>
+      </select>
+    </div>
+    <div class="check-field">
+      <input type="checkbox" id="ne-face-only">
+      <div class="txt"><b>Guests can only view their own photos</b>Requires a selfie before any photo is shown.</div>
+    </div>
     <div class="modal-actions">
       <button class="btn ghost" id="ne-cancel">Cancel</button>
       <button class="btn" id="ne-create">Create event</button>
@@ -281,7 +334,7 @@
    GUEST_BASE_URL -> your deployed guest gallery page
    The QR code encodes: GUEST_BASE_URL?event=<slug>
 ========================================================= */
-const API_BASE = "https://studio-gallery-hmyk.onrender.com/api";              // e.g. https://your-api.onrender.com/api
+const API_BASE = "https://face-detection-studio.onrender.com/api";              // e.g. https://your-api.onrender.com/api
 const GUEST_BASE_URL = "https://athisayarajj.github.io/frontend_studio_gallery/event-gallery.html"; // e.g. https://your-site.netlify.app/gallery.html
 
 const CATEGORY_OPTIONS = ["Ceremony", "Reception", "Portraits", "Candid", "Family"];
@@ -297,7 +350,7 @@ function toast(msg, isError){
   t.textContent = msg;
   t.classList.toggle("error", !!isError);
   t.classList.add("show");
-  setTimeout(() => t.classList.remove("show"), 2200);
+  setTimeout(() => t.classList.remove("show"), 2400);
 }
 function fmtDate(d){
   if(!d) return "Date TBC";
@@ -371,6 +424,11 @@ function renderEventList(){
   grid.innerHTML = "";
   EVENTS.forEach(evt => {
     const cover = evt.photos[0];
+    const badges = [];
+    if(evt.retentionDays) badges.push(`<span class="badge">Deletes in ${evt.retentionDays}d</span>`);
+    if(evt.guestsFaceOnly) badges.push(`<span class="badge gold">Face-only</span>`);
+    if(evt.isExpired) badges.push(`<span class="badge warn">Expired</span>`);
+
     const card = document.createElement("div");
     card.className = "event-card";
     card.innerHTML = `
@@ -378,7 +436,10 @@ function renderEventList(){
       <div class="event-body">
         <h3>${evt.name}</h3>
         <div class="meta">${fmtDate(evt.date)} · ${evt.venue || "Venue TBC"}</div>
-        <span class="badge">${evt.photos.length} photo${evt.photos.length !== 1 ? "s" : ""}</span>
+        <div class="badge-row">
+          <span class="badge">${evt.photos.length} photo${evt.photos.length !== 1 ? "s" : ""}</span>
+          ${badges.join("")}
+        </div>
         <div class="row"><button class="btn small" data-manage="${evt.id}" style="flex:1;">Manage</button></div>
       </div>`;
     grid.appendChild(card);
@@ -401,6 +462,7 @@ $("#modal-backdrop").addEventListener("click", (e) => { if(e.target.id === "moda
 function closeModal(){
   $("#modal-backdrop").classList.remove("open");
   $("#ne-name").value = ""; $("#ne-date").value = ""; $("#ne-venue").value = "";
+  $("#ne-retention").value = ""; $("#ne-face-only").checked = false;
 }
 $("#ne-create").addEventListener("click", async () => {
   const name = $("#ne-name").value.trim();
@@ -410,7 +472,13 @@ $("#ne-create").addEventListener("click", async () => {
   try{
     await api("/events", {
       method: "POST",
-      body: JSON.stringify({ name, date: $("#ne-date").value, venue: $("#ne-venue").value.trim() })
+      body: JSON.stringify({
+        name,
+        date: $("#ne-date").value,
+        venue: $("#ne-venue").value.trim(),
+        retentionDays: $("#ne-retention").value || null,
+        guestsFaceOnly: $("#ne-face-only").checked
+      })
     });
     closeModal();
     await refreshEvents();
@@ -431,6 +499,9 @@ function openDetail(id){
   $("#d-title").textContent = evt.name;
   $("#d-meta").textContent = `${fmtDate(evt.date)} · ${evt.venue || "Venue TBC"}`;
 
+  $("#setting-retention").value = evt.retentionDays ? String(evt.retentionDays) : "";
+  $("#setting-face-only").checked = !!evt.guestsFaceOnly;
+
   const guestUrl = `${GUEST_BASE_URL}?event=${encodeURIComponent(evt.slug)}`;
   $("#guest-link").textContent = guestUrl;
 
@@ -449,6 +520,30 @@ $("#delete-event-btn").addEventListener("click", async () => {
     toast("Event deleted");
   }catch(err){
     toast(err.message, true);
+  }
+});
+
+$("#save-settings-btn").addEventListener("click", async () => {
+  const btn = $("#save-settings-btn");
+  btn.disabled = true;
+  const original = btn.textContent;
+  btn.innerHTML = `<span class="spinner"></span> Saving`;
+  try{
+    const updated = await api(`/events/${currentEventId}`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        retentionDays: $("#setting-retention").value || null,
+        guestsFaceOnly: $("#setting-face-only").checked
+      })
+    });
+    const idx = EVENTS.findIndex(e => e.id === currentEventId);
+    if(idx > -1) EVENTS[idx] = updated;
+    toast("Settings saved");
+  }catch(err){
+    toast(err.message, true);
+  }finally{
+    btn.disabled = false;
+    btn.textContent = original;
   }
 });
 
@@ -477,8 +572,9 @@ fileInput.addEventListener("change", (e) => handleFiles(e.target.files));
 
 /* ---------- Image compression (client-side, canvas-based) ----------
    Resizes to a max width and re-encodes as JPEG at a fixed quality.
-   Runs entirely in the browser before the file ever hits the network —
-   useful since Supabase's free tier storage quota is small (1GB). */
+   Face detection itself now happens server-side (face_recognition/dlib)
+   right when the backend receives the upload — nothing face-related
+   needs to run in the browser anymore. */
 function compressImage(file, maxWidth = 1920, quality = 0.75){
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -511,8 +607,8 @@ async function handleFiles(fileList){
   const images = [...fileList].filter(f => f.type.startsWith("image/"));
   if(!images.length) return;
 
-  const shouldCompress = document.getElementById("compress-toggle").checked;
-  const dz = document.getElementById("dropzone");
+  const shouldCompress = $("#compress-toggle").checked;
+  const dz = $("#dropzone");
   const originalDzHtml = dz.innerHTML;
 
   let originalTotal = 0;
@@ -538,22 +634,22 @@ async function handleFiles(fileList){
     }
   }
 
-  dz.innerHTML = `<strong>Uploading ${images.length} photo${images.length !== 1 ? "s" : ""}...</strong>`;
+  dz.innerHTML = `<strong>Uploading &amp; detecting faces&hellip;</strong><span style="display:block; font-size:12px; margin-top:4px;">This can take a little longer than a plain upload.</span>`;
 
   const formData = new FormData();
   filesToUpload.forEach(f => formData.append("photos", f));
 
   try{
-    await api(`/events/${currentEventId}/photos`, { method: "POST", body: formData });
+    const result = await api(`/events/${currentEventId}/photos`, { method: "POST", body: formData });
     await refreshCurrentEventDetail();
+    const withFaces = (result.uploaded || []).filter(p => (p.facesDetected || 0) > 0).length;
+    const parts = [];
     if(shouldCompress && originalTotal > 0){
       const savedPct = Math.max(0, Math.round((1 - compressedTotal / originalTotal) * 100));
-      const fromMb = (originalTotal / (1024 * 1024)).toFixed(1);
-      const toMb = (compressedTotal / (1024 * 1024)).toFixed(1);
-      toast(`Uploaded — compressed ${fromMb}MB to ${toMb}MB (${savedPct}% smaller)`);
-    }else{
-      toast("Photos uploaded");
+      parts.push(`compressed ${(originalTotal/1024/1024).toFixed(1)}MB to ${(compressedTotal/1024/1024).toFixed(1)}MB (${savedPct}% smaller)`);
     }
+    parts.push(`faces found in ${withFaces}/${images.length} photos`);
+    toast(`Uploaded — ${parts.join(" • ")}`);
   }catch(err){
     toast(err.message || "Upload failed", true);
   }finally{
@@ -576,8 +672,12 @@ function renderPhotoGrid(){
     const item = document.createElement("div");
     item.className = "photo-item";
     const options = CATEGORY_OPTIONS.map(c => `<option ${c===photo.category?"selected":""}>${c}</option>`).join("");
+    const faceTag = photo.facesDetected
+      ? `<span class="face-tag">${photo.facesDetected} face${photo.facesDetected !== 1 ? "s" : ""}</span>`
+      : `<span class="face-tag" style="color:var(--dust);">no faces</span>`;
     item.innerHTML = `
       <img src="${photo.url}" alt="">
+      ${faceTag}
       <button class="del" data-del="${photo.id}" aria-label="Delete photo">&times;</button>
       <select data-cat="${photo.id}">${options}</select>`;
     grid.appendChild(item);
