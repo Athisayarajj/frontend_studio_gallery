@@ -443,6 +443,37 @@ function setupFindMeCard(){
        <p class="find-me-privacy">Your selfie is used once to find a match, then discarded &middot; never stored</p>`;
 }
 
+/* Selfies from modern phones (especially iPhone HEIC captures) can be
+   several MB — compressing before upload cuts both the transfer time
+   and the server's decode time, without hurting match accuracy (face
+   detection only needs ~800px of resolution anyway). */
+function compressSelfie(file, maxWidth = 1000, quality = 0.85){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+        if(width > maxWidth){
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width; canvas.height = height;
+        canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+        canvas.toBlob((blob) => {
+          if(!blob){ resolve(file); return; } // fall back to original if compression fails
+          resolve(new File([blob], "selfie.jpg", { type: "image/jpeg" }));
+        }, "image/jpeg", quality);
+      };
+      img.onerror = () => resolve(file); // fall back to original on decode issues
+      img.src = e.target.result;
+    };
+    reader.onerror = () => resolve(file);
+    reader.readAsDataURL(file);
+  });
+}
+
 selfieInput.addEventListener("change", async (e) => {
   const file = e.target.files[0];
   selfieInput.value = "";
@@ -451,10 +482,23 @@ selfieInput.addEventListener("change", async (e) => {
   findMeCard.innerHTML = `<h2>Looking for you&hellip;</h2><p>One moment — matching your selfie against the gallery.</p>`;
 
   try{
+    const compressedSelfie = await compressSelfie(file);
     const formData = new FormData();
-    formData.append("selfie", file);
+    formData.append("selfie", compressedSelfie);
     const res = await fetch(`${API_BASE}/gallery/${encodeURIComponent(slug)}/find-me`, { method: "POST", body: formData });
-    const data = await res.json();
+
+    let data;
+    try{
+      data = await res.json();
+    }catch{
+      // Response wasn't valid JSON — usually means the request timed out
+      // partway (a slow host killed it) rather than a real app error.
+      findMeCard.innerHTML = `
+        <h2>That took too long</h2>
+        <p>The match timed out — please try again, it's usually quick on a second try.</p>
+        <div class="find-me-actions"><label class="find-me-btn" for="selfie-input"><span>&#128247;</span> Try again</label></div>`;
+      return;
+    }
 
     if(!res.ok){
       findMeCard.innerHTML = `
